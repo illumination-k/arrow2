@@ -1,7 +1,7 @@
 use avro_schema::Schema as AvroSchema;
 
 use crate::datatypes::{IntervalUnit, PhysicalType, PrimitiveType};
-use crate::types::months_days_ns;
+use crate::types::{months_days_ns, NativeType};
 use crate::{array::*, datatypes::DataType};
 
 use super::super::super::iterator::*;
@@ -66,6 +66,31 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 |x, buf| {
                     util::zigzag_encode(x.len() as i64, buf).unwrap();
                     buf.extend_from_slice(x.as_bytes());
+                },
+                vec![],
+            ))
+        }
+        (PhysicalType::LargeUtf8, AvroSchema::String(_)) => {
+            let values = array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.values_iter(),
+                |x, buf| {
+                    util::zigzag_encode(x.len() as i64, buf).unwrap();
+                    buf.extend_from_slice(x.as_bytes());
+                },
+                vec![],
+            ))
+        }
+        (PhysicalType::LargeUtf8, AvroSchema::Union(_)) => {
+            let values = array.as_any().downcast_ref::<Utf8Array<i64>>().unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.iter(),
+                |x, buf| {
+                    util::zigzag_encode(x.is_some() as i64, buf).unwrap();
+                    if let Some(x) = x {
+                        util::zigzag_encode(x.len() as i64, buf).unwrap();
+                        buf.extend_from_slice(x.as_bytes());
+                    }
                 },
                 vec![],
             ))
@@ -176,6 +201,22 @@ pub fn new_serializer<'a>(array: &'a dyn Array, schema: &AvroSchema) -> BoxSeria
                 values.values().iter(),
                 |x, buf| {
                     buf.extend_from_slice(&x.to_le_bytes());
+                },
+                vec![],
+            ))
+        }
+        (PhysicalType::Primitive(PrimitiveType::Float64), AvroSchema::Union(_)) => {
+            let values = array
+            .as_any()
+            .downcast_ref::<PrimitiveArray<f64>>()
+            .unwrap();
+            Box::new(BufStreamingIterator::new(
+                values.iter(),
+                |x, buf| {
+                    util::zigzag_encode(x.is_some() as i64, buf).unwrap();
+                    if let Some(x) = x {
+                        buf.extend_from_slice(&x.to_le_bytes());
+                    }
                 },
                 vec![],
             ))

@@ -17,6 +17,7 @@ pub(super) fn schema() -> Schema {
         Field::new("date", DataType::Date32, false),
         Field::new("d", DataType::Binary, false),
         Field::new("e", DataType::Float64, false),
+        Field::new("e_null", DataType::Float64, true),
         Field::new("f", DataType::Boolean, false),
         Field::new("g", DataType::Utf8, true),
         Field::new("h", DataType::Interval(IntervalUnit::MonthDayNano), true),
@@ -31,6 +32,7 @@ pub(super) fn data() -> Chunk<Arc<dyn Array>> {
         Arc::new(Int32Array::from_slice([1, 2]).to(DataType::Date32)) as Arc<dyn Array>,
         Arc::new(BinaryArray::<i32>::from_slice([b"foo", b"bar"])) as Arc<dyn Array>,
         Arc::new(PrimitiveArray::<f64>::from_slice([1.0, 2.0])) as Arc<dyn Array>,
+        Arc::new(PrimitiveArray::<f64>::from([Some(1.0), None])) as Arc<dyn Array>,
         Arc::new(BooleanArray::from_slice([true, false])) as Arc<dyn Array>,
         Arc::new(Utf8Array::<i32>::from([Some("foo"), None])) as Arc<dyn Array>,
         Arc::new(PrimitiveArray::<months_days_ns>::from([
